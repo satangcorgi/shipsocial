@@ -1,0 +1,94 @@
+// Prisma schema for ShipSocial
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Platform {
+  LINKEDIN
+  INSTAGRAM
+  X
+  FACEBOOK
+}
+
+enum Status {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+}
+
+model Brand {
+  id        String   @id @default(cuid())
+  name      String
+  website   String?
+  palette   String[] // hex colors
+  voiceCard Json
+
+  pillars   Pillar[]
+  windows   Window[]
+  posts     Post[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Pillar {
+  id        String  @id @default(cuid())
+  brandId   String
+  brand     Brand   @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  name      String
+  desc      String?
+
+  posts     Post[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([brandId, name])
+}
+
+model Window {
+  id        String   @id @default(cuid())
+  brandId   String
+  brand     Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  platform  Platform
+  start     String   // "HH:MM"
+  end       String   // "HH:MM"
+  tz        String   // IANA tz
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([brandId, platform])
+}
+
+model Post {
+  id          String    @id @default(cuid())
+  brandId     String
+  brand       Brand     @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  pillarId    String?
+  pillar      Pillar?   @relation(fields: [pillarId], references: [id], onDelete: SetNull)
+
+  platform    Platform
+  status      Status
+
+  title       String?
+  body        String
+  whyNote     String?
+  framework   String?
+  hashtags    String[]
+  altText     String?   // <-- NEW: for image accessibility/graphics
+
+  scheduledAt DateTime?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([brandId, status, scheduledAt])
+  @@index([platform, status, scheduledAt])
+}
