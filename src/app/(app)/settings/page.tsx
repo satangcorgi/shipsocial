@@ -3,78 +3,108 @@
 import { useState } from "react";
 
 export default function SettingsPage() {
-  const [checking, setChecking] = useState(false);
-  const [health, setHealth] = useState<null | { ok: boolean; error?: string }>(null);
+  const [loading, setLoading] = useState(false);
+  const [ok, setOk] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
 
-  async function checkDb() {
-    setChecking(true);
-    setHealth(null);
+  async function pingHealth() {
+    setLoading(true);
+    setOk(null);
+    setErr(null);
     try {
       const res = await fetch("/api/db/health", { cache: "no-store" });
       const j = await res.json();
-      setHealth(j);
+      if (!res.ok || !j.ok) throw new Error(j.error || "Health check failed");
+      setOk("Database connection OK.");
     } catch (e: any) {
-      setHealth({ ok: false, error: e?.message || "Request failed" });
+      setErr(e?.message || "Health check failed");
     } finally {
-      setChecking(false);
+      setLoading(false);
     }
   }
 
   async function resetDemo() {
-    if (!confirm("Reset demo data? This will wipe posts, pillars, windows, and reseed.")) return;
-    const res = await fetch("/api/db/reset", { method: "POST" });
-    const j = await res.json();
-    alert(j.ok ? "Demo data reset. Revisit Onboarding/Voice to tweak." : j.error || "Reset failed");
+    if (!confirm("Reset demo data? This will recreate the Brand, default Pillars, windows, and clear posts.")) {
+      return;
+    }
+    setLoading(true);
+    setOk(null);
+    setErr(null);
+    try {
+      const res = await fetch("/api/db/reset", { method: "POST" });
+      const j = await res.json();
+      if (!res.ok || !j.ok) throw new Error(j.error || "Reset failed");
+      setOk("Demo data reset. Visit /onboarding to tweak, or /posts to generate drafts.");
+    } catch (e: any) {
+      setErr(e?.message || "Reset failed");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold">Settings</h1>
-        <p className="text-gray-600">Utilities for your ShipSocial workspace.</p>
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">Settings</h1>
+          <p className="text-gray-600">Environment checks and demo controls.</p>
+        </div>
       </header>
 
-      {/* DB health */}
-      <section className="rounded-lg border bg-white p-4">
-        <h2 className="text-lg font-medium">Database health</h2>
-        <p className="text-sm text-gray-600">Ping Prisma → Postgres to verify connectivity.</p>
-        <div className="mt-3 flex items-center gap-3">
+      {err && (
+        <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{err}</div>
+      )}
+      {ok && (
+        <div className="rounded border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+          {ok}
+        </div>
+      )}
+
+      <section className="rounded-lg border bg-white p-4 grid gap-3">
+        <h2 className="text-lg font-medium">Database</h2>
+        <p className="text-sm text-gray-600">
+          Ensure your <code>DATABASE_URL</code> is configured (pooled URI on Vercel).
+        </p>
+        <div className="flex gap-2">
           <button
-            onClick={checkDb}
-            className="rounded bg-gray-900 text-white px-3 py-2 text-sm disabled:opacity-50"
-            disabled={checking}
+            onClick={pingHealth}
+            disabled={loading}
+            className="rounded border px-3 py-2 text-sm disabled:opacity-50"
+            title="Calls /api/db/health"
           >
-            {checking ? "Checking…" : "Check DB"}
+            {loading ? "Checking…" : "Check DB health"}
           </button>
-          {health && (
-            <>
-              {health.ok ? (
-                <span className="text-sm text-emerald-700">OK</span>
-              ) : (
-                <span className="text-sm text-red-700">Error: {health.error || "Unknown"}</span>
-              )}
-            </>
-          )}
         </div>
       </section>
 
-      {/* Demo reset */}
-      <section className="rounded-lg border bg-white p-4">
-        <h2 className="text-lg font-medium">Reset Database (Demo)</h2>
+      <section className="rounded-lg border bg-white p-4 grid gap-3">
+        <h2 className="text-lg font-medium">Demo data</h2>
         <p className="text-sm text-gray-600">
-          Wipes all DB rows (posts, pillars, windows, brands) and reseeds demo data. Useful for clean demos.
-          After resetting, revisit <a className="underline" href="/onboarding">Onboarding</a> and{" "}
-          <a className="underline" href="/voice">Voice</a>.
+          Reset to a clean demo: Brand + default pillars/windows, clears posts. Useful for demos or tests.
         </p>
-        <div className="mt-3">
+        <div className="flex gap-2">
           <button
             onClick={resetDemo}
-            className="rounded border px-3 py-2 text-sm"
+            disabled={loading}
+            className="rounded bg-red-600 text-white px-3 py-2 text-sm disabled:opacity-50"
+            title="Calls /api/db/reset"
           >
-            Reset demo data
+            {loading ? "Resetting…" : "Reset demo data"}
           </button>
+          <a
+            href="/onboarding"
+            className="rounded border px-3 py-2 text-sm"
+            title="Go to onboarding to customize"
+          >
+            Go to Onboarding
+          </a>
         </div>
       </section>
+
+      <p className="text-xs text-gray-500">
+        Tip: After reset, generate new drafts on <a className="underline" href="/posts">/posts</a> and schedule within windows on{" "}
+        <a className="underline" href="/schedule">/schedule</a>.
+      </p>
     </div>
   );
 }
