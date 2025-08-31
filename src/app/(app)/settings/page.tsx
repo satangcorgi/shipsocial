@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { DAILY_LIMIT, resetCredits } from "@/lib/credits";
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
@@ -21,6 +22,13 @@ export default function SettingsPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function resetLocalCredits() {
+    setOk(null);
+    setErr(null);
+    const { left } = resetCredits();
+    setOk(`Local credits reset to ${left}/${DAILY_LIMIT} for today.`);
   }
 
   async function resetDemo() {
@@ -51,14 +59,8 @@ export default function SettingsPage() {
         </div>
       </header>
 
-      {err && (
-        <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{err}</div>
-      )}
-      {ok && (
-        <div className="rounded border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-          {ok}
-        </div>
-      )}
+      {err && <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{err}</div>}
+      {ok && <div className="rounded border border-green-200 bg-green-50 p-3 text-sm text-green-700">{ok}</div>}
 
       <section className="rounded-lg border bg-white p-4 grid gap-3">
         <h2 className="text-lg font-medium">Database</h2>
@@ -78,11 +80,18 @@ export default function SettingsPage() {
       </section>
 
       <section className="rounded-lg border bg-white p-4 grid gap-3">
-        <h2 className="text-lg font-medium">Demo data</h2>
+        <h2 className="text-lg font-medium">Demo helpers</h2>
         <p className="text-sm text-gray-600">
-          Reset to a clean demo: Brand + default pillars/windows, clears posts. Useful for demos or tests.
+          Local-only actions for smoother demos (no server keys required).
         </p>
         <div className="flex gap-2">
+          <button
+            onClick={resetLocalCredits}
+            className="rounded border px-3 py-2 text-sm"
+            title="Resets the browser’s daily credits counter"
+          >
+            Reset local credits
+          </button>
           <button
             onClick={resetDemo}
             disabled={loading}
@@ -91,20 +100,12 @@ export default function SettingsPage() {
           >
             {loading ? "Resetting…" : "Reset demo data"}
           </button>
-          <a
-            href="/onboarding"
-            className="rounded border px-3 py-2 text-sm"
-            title="Go to onboarding to customize"
-          >
-            Go to Onboarding
-          </a>
+          <a href="/onboarding" className="rounded border px-3 py-2 text-sm">Go to Onboarding</a>
         </div>
+        <p className="text-xs text-gray-500">
+          Credits are stored in your browser and auto-reset at local midnight.
+        </p>
       </section>
-
-      <p className="text-xs text-gray-500">
-        Tip: After reset, generate new drafts on <a className="underline" href="/posts">/posts</a> and schedule within windows on{" "}
-        <a className="underline" href="/schedule">/schedule</a>.
-      </p>
     </div>
   );
 }
