@@ -20,6 +20,20 @@ function todayKey(): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+// Time left until local midnight, formatted for the badge (e.g. "6h 12m")
+export function etaString(): string {
+  const now = new Date();
+  const nextMidnight = new Date(now);
+  nextMidnight.setHours(24, 0, 0, 0); // local next 00:00
+  const ms = Math.max(0, nextMidnight.getTime() - now.getTime());
+  const totalMinutes = Math.round(ms / 60000);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+}
+
 function normalize(state: Partial<CreditState> | null): CreditState {
   const key = todayKey();
   if (!state || state.date !== key) {
@@ -77,7 +91,7 @@ export function refund(n = 1): { left: number } {
   return { left: next.left };
 }
 
-// NEW: reset for demos
+// reset for demos
 export function resetCredits(): { left: number } {
   const key = todayKey();
   const next: CreditState = { date: key, used: 0, left: DAILY_LIMIT };
